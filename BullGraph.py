@@ -3,14 +3,7 @@ from pandas_datareader import data
 from datetime import datetime
 import plotly.graph_objects as go
 from BullColors import colors
-
-# Plotting
-import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-import seaborn as sns
-
 from TimeUtils import *
-
 
 class BullGraph(object):
     # TODO: Change to use relative dates from current date
@@ -22,7 +15,7 @@ class BullGraph(object):
 
     def createFig(self): 
         """
-            createFig(ticker)
+            createFig()
             =================
                 Description: Creates historical candlestick graph for the input stock ticker.
 

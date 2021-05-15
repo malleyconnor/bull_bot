@@ -1,5 +1,4 @@
 import dash
-import dash
 import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
@@ -9,12 +8,32 @@ import requests
 
 # TODO: Change to CSS
 from BullColors import colors
-from bull_bot import *
+from BullGraph import *
+from rh_interface import *
 
 app = dash.Dash(__name__)
+bg = BullGraph(start_date=start_date, end_date=end_date)
+rh_holdings = get_rh_holdings()
+
+
+# Creating the Ticker input
 app.scripts.config.serve_locally = True
 app.css.config.serve_locally = True
 
+
+# Indicator inputs
+Days = dcc.Input(id="Days", type="text", placeholder="Days", debounce=True)
+WindowSize = dcc.Input(id="WindowSize", type="text", placeholder="Window Size", debounce=True)
+Stride = dcc.Input(id="Stride", type="text", placeholder="Stride", debounce=True)
+Threshold = dcc.Input(id="Threshold", type="text", placeholder="Threshold", debounce=True)
+
+
+
+# Creating dash table of rh holdings
+columns = [{'name' : column, 'id' : column} for column in rh_holdings.columns]
+holdings_table = dash_table.DataTable(id="holdings_table", columns=columns, data=rh_holdings.to_dict('records'))
+bear_table = dash_table.DataTable(id="bear_table", columns=1)
+graph_style = {'display':'inline-block', 'vertical-align' : 'top', 'margin-left' : '3vw', 'margin-top' : '3vw', 'width':'49%'}
 app.layout = html.Div(
     style={
         "background-color" : colors["page_background"]
@@ -25,17 +44,38 @@ app.layout = html.Div(
             children=holdings_table,
             style={'display':'inline-block', 'vertical_align':'right', 'margin-left':'3vw', 'margin-right':'3vw', 'margin-top':'10vw', 'width':'40%'}
         ),
-        ticker_bar,
+        Days,
+        WindowSize,
+        Stride,
+        Threshold,
+        bull_table,
+        bear_table,
         html.Div(id="ticker_out")
     ]
 )
 
+## Rendering the ticker input for the graph
+#@app.callback(Output("main_graph", "figure"),
+#[Input("ticker_in", "value")])
+#def ticker_render(ticker=None):
+#    if (ticker == None):
+#        bg.ticker = "NVDA"
+#        fig = bg.createFig()
+#        fig, historical = bg.styleFig()
+#        return fig
+#
+#    bg.ticker = ticker
+#    fig = bg.createFig()
+#    fig, historical = bg.styleFig()
+#    return fig
+#
+#
 # Rendering the ticker input for the graph
 @app.callback(Output("main_graph", "figure"),
-[Input("ticker_in", "value")])
-def ticker_render(ticker="NVDA"):
+[Input("WindowSize", "value")])
+def window_size_render(ticker=None):
     if (ticker == None):
-        bg.ticker = "NVDA"
+        bg.ticker = "Window Size"
         fig = bg.createFig()
         fig, historical = bg.styleFig()
         return fig
