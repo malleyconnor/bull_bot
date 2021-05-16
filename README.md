@@ -1,2 +1,2 @@
 # bull_bot
-The bot for bulls only.
+An application for viewing and analyzing stocks.
