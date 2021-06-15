@@ -35,7 +35,7 @@ class BullScreener(object):
         # Gets yahoo finance data for selected stock tickers
         self.historical = {}
         self.financials = {}
-        for i in tqdm(range(50)):
+        for i in tqdm(range(10)):
             ticker = self.screen_list[i] 
             try:
                 self.historical[ticker] = data.DataReader(ticker, "yahoo", start='1/1/2021')
