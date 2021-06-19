@@ -15,7 +15,7 @@ from BullGraph import *
 import rh_interface
 
 from webull import webull
-
+from finvizfinance.screener.technical import Technical
 
 
 
@@ -75,34 +75,39 @@ wbdata = {
 }
 wb_ticker_list = wbtickers
 df = pd.DataFrame(data=wbdata)
+positions_style = {'display':'inline-block', 'vertical-align' : 'right', 'width':'100%', 'height' : '50%'}
 wbpositions = dash_table.DataTable(
     id='wbpositions', 
     columns=wbcolumns,
     data=df.to_dict('records'),
     style_as_list_view=True,
     style_data_conditional=[
-        #{
-        #    'if' : {'column_id' : 'wbname'},
-        #    'textAlign' : 'left'
-        #}
+        {
+            'if' : { 'row_index' : 'odd'},
+            'backgroundColor' : '#776871'
+        },
+        {
+            'if' : { 'row_index' : 'even'},
+            'backgroundColor': '#364156'
+        },
         {
             'if' : {
                 'filter_query' : '{wbunrealizedprofitloss} > 0',
                 'column_id' : 'wbunrealizedprofitloss'
                 },
-            'backgroundColor' : 'green'
+            'backgroundColor' : '#85B79D'
         },
         {
             'if' : {
                 'filter_query' : '{wbunrealizedprofitloss} < 0',
                 'column_id' : 'wbunrealizedprofitloss'
                 },
-            'backgroundColor' : 'red'
+            'backgroundColor' : '#D33F49'
         },
     ],
     sort_action='native',
     row_selectable='single',
-    style_table={'height':'100%'}
+    style_table=positions_style,
 )
 #############################3
 
@@ -127,7 +132,6 @@ for i in range(len(wbaccount['openOrders'])):
                     slproximity.append(lastPrice - limitPrice)
                     slpotentialloss.append(orderShares * (limitPrice - purchasePrice))
                     break
-
 slcolumns = [
     {'name' : 'Ticker', 'id' : 'slticker'},
     {'name' : 'Price', 'id' : 'slprice'},
@@ -143,6 +147,7 @@ sldata = {
     'slpotentialloss' : slpotentialloss,
 }
 sldf = pd.DataFrame(data=sldata)
+sl_style = {'display':'inline-block', 'float' : 'left', 'vertical-align' : 'left', 'margin-left' : '5%', 'margin-right' : '5%', 'margin-bottom' : '5%', 'width':'90%', 'height' : '75%'}
 sltable = dash_table.DataTable(
     id='sltable', 
     columns=slcolumns,
@@ -150,7 +155,54 @@ sltable = dash_table.DataTable(
     style_as_list_view=True,
     sort_action='native',
     row_selectable='single',
-    style_table={'width' : '90%', 'height':'90%'}
+    style_table=sl_style
+)
+
+#Take Profit Alerts
+alert_factor = 0.75
+tptickers, tpprices, tplimitprice, tpproximity, tppotentialprofit = [], [], [], [], []
+for i in range(len(wbaccount['openOrders'])):
+    order = wbaccount['openOrders'][i] 
+    ticker = order['ticker']['symbol']
+    if order['comboType'] == 'STOP_PROFIT':
+        for j in range(len(wbaccount['positions'])):
+            if wbaccount['positions'][j]['ticker']['symbol'] == ticker:
+                purchasePrice = float(wbaccount['positions'][j]['costPrice'])
+                lastPrice     = float(wbaccount['positions'][j]['lastPrice'])
+                limitPrice    = float(order['lmtPrice'])
+                orderShares   = float(order['totalQuantity'])
+                proximity_factor = 1 - abs((lastPrice - limitPrice) / (purchasePrice - limitPrice))
+                if proximity_factor <= 1 and proximity_factor >= 0 and proximity_factor >= alert_factor:
+                    tptickers.append(order['ticker']['symbol'])
+                    tpprices.append(lastPrice)
+                    tplimitprice.append(limitPrice)
+                    tpproximity.append(lastPrice - limitPrice)
+                    tppotentialprofit.append(orderShares * (limitPrice - purchasePrice))
+                    break
+tpcolumns = [
+    {'name' : 'Ticker', 'id' : 'tpticker'},
+    {'name' : 'Price', 'id' : 'tpprice'},
+    {'name' : 'Limit Price', 'id' : 'tplimitprice'},
+    {'name' : 'Proximity ($)', 'id' : 'tpproximity'},
+    {'name' : 'Potential Profit', 'id' : 'tppotentialprofit'}
+]
+tpdata = {
+    'tpticker' : tptickers,
+    'tpprice' : tpprices,
+    'tplimitprice' : tplimitprice,
+    'tpproximity' : tpproximity,
+    'tppotentialprofit' : tppotentialprofit,
+}
+tpdf = pd.DataFrame(data=sldata)
+tp_style = {'display':'inline-block', 'float' : 'left', 'vertical-align' : 'left', 'margin-top' : '5%', 'margin-left' : '5%', 'margin-right' : '5%', 'margin-bottom' : '5%', 'width':'90%', 'height' : '75%'}
+tptable = dash_table.DataTable(
+    id='tptable', 
+    columns=tpcolumns,
+    data=tpdf.to_dict('records'),
+    style_as_list_view=True,
+    sort_action='native',
+    row_selectable='single',
+    style_table=tp_style
 )
 
 
@@ -158,7 +210,7 @@ sltable = dash_table.DataTable(
 
 app = dash.Dash(__name__)
 bg = BullGraph(start_date=start_date, end_date=end_date)
-bs = BullScreener(timeframe=100, ticker_list=wb_ticker_list)
+#bs = BullScreener(timeframe=100, ticker_list=wb_ticker_list)
 
 # Creating the Ticker input
 app.scripts.config.serve_locally = True
@@ -166,37 +218,77 @@ app.css.config.serve_locally = True
 
 
 # Indicator inputs
-Days = dcc.Input(id="Days", type="text", placeholder="Days", debounce=True)
-WindowSize = dcc.Input(id="WindowSize", type="text", placeholder="Window Size", debounce=True)
-Stride = dcc.Input(id="Stride", type="text", placeholder="Stride", debounce=True)
-Threshold = dcc.Input(id="Threshold", type="text", placeholder="Threshold", debounce=True)
-Screen    = html.Button('Screen', id='Screen-button', n_clicks=0)
+#Days = dcc.Input(id="Days", type="text", placeholder="Days", debounce=True)
+#WindowSize = dcc.Input(id="WindowSize", type="text", placeholder="Window Size", debounce=True)
+#Stride = dcc.Input(id="Stride", type="text", placeholder="Stride", debounce=True)
+#Threshold = dcc.Input(id="Threshold", type="text", placeholder="Threshold", debounce=True)
+#Screen    = html.Button('Screen', id='Screen-button', n_clicks=0)
 
 columns = [{'name' : 'Stock', 'id' : 'Stock'}, {'name' : 'Sentiment', 'id' : 'Sentiment'}]
 bull_table = dash_table.DataTable(id="bull_table", columns=columns)
-graph_style = {'display':'inline-block', 'vertical-align' : 'top', 'margin-left' : '3vw', 'margin-top' : '3vw', 'width':'45%', 'height':'40%'}
+graph_style = {'display':'inline-block', 'vertical-align' : 'left', 'width':'100%', 'height' : '50%', 'backgroundColor' : '#364156'}
 
+soundtrack = html.Audio(autoPlay=True, loop=True, id='music', src='http://127.0.0.1:8050/assets/fresh_beat_no_noise.wav', controls=False, style={'margin-left' : '5%'})
+
+divclass = html.Div(className="flexbox", )
+
+functionStyle_small = {'display':'inline-block', 'vertical_align':'left', 'margin-bottom' : '2%', 'height' : '10%', 'width':'90%', 'backgroundColor' : '#364156', 'border-radius':'25px', 'border-style' : 'solid', 'border-color' : 'green', 'overflow-y' : 'hidden'}
+functionStyle_big = {'display':'inline-block', 'vertical_align':'left', 'margin-bottom' : '2%', 'height' : '40%', 'width':'90%', 'backgroundColor' : '#364156', 'border-radius':'25px', 'border-top-width' : '30%', 'border-style' : 'solid', 'border-color' : 'green', 'overflow-y' : 'hidden'}
+
+
+dropdownFunc = html.Div(children=[html.H2('Take Profit Alerts', style={'margin-left' : '2%', 'color' : 'black', 'position' : 'absolute'}), html.Button(style={'height' : '80px', 'width' : '100%', 'color' : 'black', 'background-color' : 'transparent', 'border-color' : 'transparent'}, id='funcButton0', n_clicks=0), tptable], style=functionStyle_small, id='funcDiv0')
 
 
 def home_page():
     return [
-        dcc.Graph(id="main_graph", figure=bg.fig, style=graph_style),
         html.Div(
-            children=wbpositions,
-            style={'display':'inline-block', 'vertical_align':'right', 'margin-left':'3vw', 'margin-right':'3vw', 'margin-top':'3vw', 'width':'45%', 'height':'45%'}
+            children=[html.H1('Bull Bot', style={'margin-left' : '2.22%', 'color' : '#85B79D', 'height' : '100%', 'margin-left' : '5%'})],
+            style={'display':'inline-block', 'vertical_align':'left', 'height' : '5%', 'width' : '100%', 'backgroundColor' : '#0F0F0F'}
         ),
         html.Div(
-            children=[html.H2('Stop Loss Alerts'), sltable],
-            style={'display':'inline-block', 'vertical_align':'left', 'margin-left':'3vw', 'margin-right':'3vw', 'margin-top':'3vw', 'width':'42%', 'height':'20%', 'backgroundColor' : 'red'}
+            children=[dcc.Graph(id="main_graph", figure=bg.fig, style=graph_style), wbpositions], 
+            style={'float':'left', 'vertical-align':'left', 'margin-left' : '5%', 'margin-right':'5%', 'margin-top':'2%', 'width':'40%', 'height':'800px', 'backgroundColor' : '#364156'}
         ),
         html.Div(
-            children=html.H2('Take Profit Alerts'),
-            style={'display':'inline-block', 'vertical_align':'right', 'margin-left':'3vw', 'margin-right':'3vw', 'margin-top':'3vw', 'width':'42%', 'height':'20%', 'backgroundColor' : 'green'}
-        )
+            children=[
+                dropdownFunc,
+                html.Div(
+                    children=[html.H2('Stop Loss Alerts', style={'margin-left' : '5%', 'color' : 'black'}), sltable],
+                    style=functionStyle_small
+                ),
+                html.Div(
+                    children=[
+                        html.H2('Bottom Channel Screener', style={'margin-left' : '5%', 'color' : 'black'}),
+                        html.Div( 
+                            children=[
+                                html.Div(
+                                    children=dcc.Dropdown(id='dropdown_bottomchannel', options=[{'label' : 'Channel Up (Strong)', 'value' : 'channel_up'},{'label' : 'Channel', 'value' : 'channel'}, ], value='channel_up', clearable=False),
+                                    style={'float' : 'left', 'width' : '15%', 'margin-left' : '5%', 'margin-right' : '2.22%'}
+                                ),
+                                dcc.Input(type='number', placeholder='14 Day RSI Threshold', debounce=True, style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}),
+                                html.Div(
+                                    children=dcc.Dropdown(id='dropdown_bcvolatility', options=[{'label' : 'No Volatility Filter', 'value'  : 'nf'}, {'label' : 'Week - 5%', 'value' : 'w5'},{'label' : 'Week - 10%', 'value' : 'w10'}, {'label' : 'Month - 5%', 'value' : 'm5'},{'label' : 'Month - 10%', 'value' : 'm10'}], clearable=False, value='nf'),
+                                    style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}
+                                ),
+                                html.Button('Screen', id='screen_bottomchannel', n_clicks=0, style={'float' : 'left', 'width' : '15%'})
+                            ],
+                            style={'display':'inline-block', 'vertical_align':'left', 'width' : '100%', 'margin-bottom':'2%'},
+                            id='inputs_bottomchannel'
+                        ),
+
+                    ],
+                    style=functionStyle_small
+                ),
+            ],
+            style={'float':'left', 'height' : '800px', 'width':'40%', 'margin-top' : '2%', 'margin-right' : '5%', 'overflow-y' : 'auto'}
+        ),
+        soundtrack
     ]
 
 app.layout = html.Div(
-    children=home_page()
+    children=home_page(),
+    style={'backgroundColor' : '#2D2E2E'},
+    id="app"
 )
 
 @app.callback(Output("main_graph", "figure"), [Input("wbpositions", "selected_rows")])
@@ -208,6 +300,28 @@ def display_wb_position(selected_rows):
         fig, historical = bg.styleFig()
         return fig
 
+@app.callback(Output("funcDiv0", "style"), [Input("funcButton0", "n_clicks")])
+def dropdownFunc0(n_clicks):
+    if int(n_clicks) % 2 == 0:
+        return functionStyle_small
+    else:
+        return functionStyle_big
+
+
+#@app.callback(Output("FuncDiv1", "style"), [Input("FuncButton1", "n_clicks")])
+#def dropdownFunc0(n_clicks):
+#    if int(n_clicks) % 2 == 0:
+#        return functionStyle_small
+#    else:
+#        return functionStyle_big
+#
+#
+#@app.callback(Output("FuncDiv2", "style"), [Input("FuncButton2", "n_clicks")])
+#def dropdownFunc0(n_clicks):
+#    if int(n_clicks) % 2 == 0:
+#        return functionStyle_small
+#    else:
+#        return functionStyle_big
 
 
 
@@ -243,4 +357,4 @@ if __name__ == "__main__":
     #bs.get_trendlines()
 
     # Run server
-    app.run_server(debug=True, use_reloader=False)  # Turn off reloader if inside Jupyter
+    app.run_server(debug=False, use_reloader=False)  # Turn off reloader if inside Jupyter
