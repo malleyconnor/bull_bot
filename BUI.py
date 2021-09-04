@@ -28,6 +28,14 @@ Stride = dcc.Input(id="Stride", type="text", placeholder="Stride", debounce=True
 Threshold = dcc.Input(id="Threshold", type="text", placeholder="Threshold", debounce=True)
 
 
+# Backtester inputs
+DAYS = dcc.Input(id="DAYS", type="text", placeholder="500", debounce=True)
+RSI_LENGTH = dcc.Input(id="RSI_LENGTH", type="text", placeholder="14", debounce=True)
+RSI_OPEN = dcc.Input(id="RSI_OPEN", type="text", placeholder="40", debounce=True)
+RSI_CLOSE = dcc.Input(id="RSI_CLOSE", type="text", placeholder="60", debounce=True)
+MAX_PER_STOCK = dcc.Input(id="MAX_PER_STOCK", type="text", placeholder="0.00", debounce=True)
+
+
 
 # Creating dash table of rh holdings
 columns = [{'name' : column, 'id' : column} for column in rh_holdings.columns]
@@ -48,8 +56,13 @@ app.layout = html.Div(
         WindowSize,
         Stride,
         Threshold,
-        bull_table,
+        #bull_table,
         bear_table,
+        DAYS,
+        RSI_LENGTH,
+        RSI_OPEN,
+        RSI_CLOSE,
+        MAX_PER_STOCK,
         html.Div(id="ticker_out")
     ]
 )

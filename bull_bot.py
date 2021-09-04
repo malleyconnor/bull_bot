@@ -23,8 +23,10 @@ from finvizfinance.screener.technical import Technical
 
 
 wb = webull()
-##wb.login(input('email: '), input('Password: '), 'Conbob', sq[0]['questionId'], input(sq[0]['questionName']))
 wbaccount = wb.get_account()
+
+#mfa = wb.get_mfa('malleyconnor@knights.ucf.edu')
+#security = wb.get_security('malleyconnor@knights.ucf.edu')
 
 fh = open('webull_credentials.json', 'r')
 credential_data = json.load(fh)
@@ -228,16 +230,78 @@ columns = [{'name' : 'Stock', 'id' : 'Stock'}, {'name' : 'Sentiment', 'id' : 'Se
 bull_table = dash_table.DataTable(id="bull_table", columns=columns)
 graph_style = {'display':'inline-block', 'vertical-align' : 'left', 'width':'100%', 'height' : '50%', 'backgroundColor' : '#364156'}
 
-soundtrack = html.Audio(autoPlay=True, loop=True, id='music', src='http://127.0.0.1:8050/assets/fresh_beat_no_noise.wav', controls=False, style={'margin-left' : '5%'})
+soundtrack = html.Audio(autoPlay= 'AUTOPLAY', loop=True, id='music', src='http://127.0.0.1:8050/assets/fresh_beat_no_noise.wav', controls=True, style={'margin-left' : '5%'})
 
 divclass = html.Div(className="flexbox", )
 
 functionStyle_small = {'display':'inline-block', 'vertical_align':'left', 'margin-bottom' : '2%', 'height' : '10%', 'width':'90%', 'backgroundColor' : '#364156', 'border-radius':'25px', 'border-style' : 'solid', 'border-color' : 'green', 'overflow-y' : 'hidden'}
 functionStyle_big = {'display':'inline-block', 'vertical_align':'left', 'margin-bottom' : '2%', 'height' : '40%', 'width':'90%', 'backgroundColor' : '#364156', 'border-radius':'25px', 'border-top-width' : '30%', 'border-style' : 'solid', 'border-color' : 'green', 'overflow-y' : 'hidden'}
 
+# Take Profit Alerts
+dropdownFunc0 = html.Div(
+                    children=[
+                        html.H2('Take Profit Alerts', style={'margin-left' : '2%', 'color' : 'black', 'position' : 'absolute'}), 
+                        html.Button(style={'height' : '80px', 'width' : '100%', 'color' : 'black', 'background-color' : 'transparent', 'border-color' : 'transparent'}, id='funcButton0', n_clicks=0), 
+                        tptable
+                    ], 
+                    style=functionStyle_small, 
+                    id='funcDiv0')
+                    
+# Stop Loss Alerts
+dropdownFunc1 = html.Div(
+                    children=[
+                        html.H2('Stop Loss Alerts', style={'margin-left' : '5%', 'color' : 'black'}), 
+                        html.Button(style={'height' : '80px', 'width' : '100%', 'color' : 'black', 'background-color' : 'transparent', 'border-color' : 'transparent'}, id='funcButton1', n_clicks=0),
+                        sltable
+                    ],
+                    style=functionStyle_small,
+                    id='funcDiv1'
+                )
 
-dropdownFunc = html.Div(children=[html.H2('Take Profit Alerts', style={'margin-left' : '2%', 'color' : 'black', 'position' : 'absolute'}), html.Button(style={'height' : '80px', 'width' : '100%', 'color' : 'black', 'background-color' : 'transparent', 'border-color' : 'transparent'}, id='funcButton0', n_clicks=0), tptable], style=functionStyle_small, id='funcDiv0')
+# Bottom Channel Screener
+dropdownFunc2 = html.Div(
+    children=[
+        html.H2('Bottom Channel Screener', style={'margin-left' : '5%', 'color' : 'black'}),
+        html.Button(style={'height' : '80px', 'width' : '100%', 'color' : 'black', 'background-color' : 'transparent', 'border-color' : 'transparent'}, id='funcButton2', n_clicks=0),
+        html.Div( 
+            children=[
+                html.Div(
+                    children=dcc.Dropdown(id='dropdown_bottomchannel', options=[{'label' : 'Channel Up (Strong)', 'value' : 'channel_up'},{'label' : 'Channel', 'value' : 'channel'}, ], value='channel_up', clearable=False),
+                    style={'float' : 'left', 'width' : '15%', 'margin-left' : '5%', 'margin-right' : '2.22%'}
+                ),
+                dcc.Input(type='number', placeholder='14 Day RSI Threshold', debounce=True, style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}),
+                html.Div(
+                    children=dcc.Dropdown(id='dropdown_bcvolatility', options=[{'label' : 'No Volatility Filter', 'value'  : 'nf'}, {'label' : 'Week - 5%', 'value' : 'w5'},{'label' : 'Week - 10%', 'value' : 'w10'}, {'label' : 'Month - 5%', 'value' : 'm5'},{'label' : 'Month - 10%', 'value' : 'm10'}], clearable=False, value='nf'),
+                    style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}
+                ),
+                html.Button('Screen', id='screen_bottomchannel', n_clicks=0, style={'float' : 'left', 'width' : '15%'})
+            ],
+            style={'display':'inline-block', 'vertical_align':'left', 'width' : '100%', 'margin-bottom':'2%'},
+        )
+    ],
+    style=functionStyle_small,
+    id='funcDiv2'
+)
 
+# Algorithm Back Tester
+dropdownFunc3 = html.Div(
+    children=[
+        html.H2('Algo Back-tester', style={'margin-left' : '5%', 'color' : 'black'}),
+        html.Button(style={'height' : '80px', 'width' : '100%', 'color' : 'black', 'background-color' : 'transparent', 'border-color' : 'transparent'}, id='funcButton3', n_clicks=0),
+        html.Div(
+            children=[
+                dcc.Input(id="DAYS", type="text", placeholder="500", debounce=True,style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}),
+                dcc.Input(id="RSI_LENGTH", type="text", placeholder="14", debounce=True, style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}),
+                dcc.Input(id="RSI_OPEN", type="text", placeholder="40", debounce=True, style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}),
+                dcc.Input(id="RSI_CLOSE", type="text", placeholder="60", debounce=True, style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}),
+                dcc.Input(id="MAX_PER_STOCK", type="text", placeholder="0.00", debounce=True, style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'})
+            ],
+            style={'display':'inline-block', 'vertical_align':'left', 'width' : '100%', 'margin-left' : '5%', 'margin-bottom':'2%'},
+        ),
+    ],
+    style=functionStyle_small,
+    id='funcDiv3'
+)
 
 def home_page():
     return [
@@ -251,34 +315,10 @@ def home_page():
         ),
         html.Div(
             children=[
-                dropdownFunc,
-                html.Div(
-                    children=[html.H2('Stop Loss Alerts', style={'margin-left' : '5%', 'color' : 'black'}), sltable],
-                    style=functionStyle_small
-                ),
-                html.Div(
-                    children=[
-                        html.H2('Bottom Channel Screener', style={'margin-left' : '5%', 'color' : 'black'}),
-                        html.Div( 
-                            children=[
-                                html.Div(
-                                    children=dcc.Dropdown(id='dropdown_bottomchannel', options=[{'label' : 'Channel Up (Strong)', 'value' : 'channel_up'},{'label' : 'Channel', 'value' : 'channel'}, ], value='channel_up', clearable=False),
-                                    style={'float' : 'left', 'width' : '15%', 'margin-left' : '5%', 'margin-right' : '2.22%'}
-                                ),
-                                dcc.Input(type='number', placeholder='14 Day RSI Threshold', debounce=True, style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}),
-                                html.Div(
-                                    children=dcc.Dropdown(id='dropdown_bcvolatility', options=[{'label' : 'No Volatility Filter', 'value'  : 'nf'}, {'label' : 'Week - 5%', 'value' : 'w5'},{'label' : 'Week - 10%', 'value' : 'w10'}, {'label' : 'Month - 5%', 'value' : 'm5'},{'label' : 'Month - 10%', 'value' : 'm10'}], clearable=False, value='nf'),
-                                    style={'float' : 'left', 'width' : '15%', 'margin-right' : '2.22%'}
-                                ),
-                                html.Button('Screen', id='screen_bottomchannel', n_clicks=0, style={'float' : 'left', 'width' : '15%'})
-                            ],
-                            style={'display':'inline-block', 'vertical_align':'left', 'width' : '100%', 'margin-bottom':'2%'},
-                            id='inputs_bottomchannel'
-                        ),
-
-                    ],
-                    style=functionStyle_small
-                ),
+                dropdownFunc0,
+                dropdownFunc1,
+                dropdownFunc2,
+                dropdownFunc3
             ],
             style={'float':'left', 'height' : '800px', 'width':'40%', 'margin-top' : '2%', 'margin-right' : '5%', 'overflow-y' : 'auto'}
         ),
@@ -287,27 +327,50 @@ def home_page():
 
 app.layout = html.Div(
     children=home_page(),
-    style={'backgroundColor' : '#2D2E2E'},
+    style={'background-image' : 'http://127.0.0.1:8050/assets/gangster_sponge.jpg'},
     id="app"
 )
 
 @app.callback(Output("main_graph", "figure"), [Input("wbpositions", "selected_rows")])
 def display_wb_position(selected_rows):
-    for row in selected_rows:
-        ticker = wbpositions.data[row]['wbticker']
-        bg.ticker = ticker
-        fig = bg.createFig()
-        fig, historical = bg.styleFig()
-        return fig
+    if selected_rows is not None:
+        for row in selected_rows:
+            ticker = wbpositions.data[row]['wbticker']
+            bg.ticker = ticker
+            fig = bg.createFig()
+            fig, historical = bg.styleFig()
+            return fig
+    bg.ticker = 'NVDA'
+    fig = bg.createFig()
+    return fig
 
 @app.callback(Output("funcDiv0", "style"), [Input("funcButton0", "n_clicks")])
-def dropdownFunc0(n_clicks):
+def dropdownFunc0_callback(n_clicks):
     if int(n_clicks) % 2 == 0:
         return functionStyle_small
     else:
         return functionStyle_big
 
+@app.callback(Output("funcDiv1", "style"), [Input("funcButton1", "n_clicks")])
+def dropdownFunc1_callback(n_clicks):
+    if int(n_clicks) % 2 == 0:
+        return functionStyle_small
+    else:
+        return functionStyle_big
 
+@app.callback(Output("funcDiv2", "style"), [Input("funcButton2", "n_clicks")])
+def dropdownFunc2_callback(n_clicks):
+    if int(n_clicks) % 2 == 0:
+        return functionStyle_small
+    else:
+        return functionStyle_big
+
+@app.callback(Output("funcDiv3", "style"), [Input("funcButton3", "n_clicks")])
+def dropdownFunc3_callback(n_clicks):
+    if int(n_clicks) % 2 == 0:
+        return functionStyle_small
+    else:
+        return functionStyle_big
 #@app.callback(Output("FuncDiv1", "style"), [Input("FuncButton1", "n_clicks")])
 #def dropdownFunc0(n_clicks):
 #    if int(n_clicks) % 2 == 0:
@@ -357,4 +420,4 @@ if __name__ == "__main__":
     #bs.get_trendlines()
 
     # Run server
-    app.run_server(debug=False, use_reloader=False)  # Turn off reloader if inside Jupyter
+    app.run_server(debug=True, use_reloader=False)  # Turn off reloader if inside Jupyter

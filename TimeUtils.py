@@ -3,8 +3,8 @@ from datetime import datetime
 from datetime import date
 from datetime import timedelta
 
-start_date = datetime(2019, 1, 1)
-end_date   = datetime(2021, 6, 14)
+start_date = datetime(2021, 1, 1)
+end_date   = datetime(2021, 8, 15)
 months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
 'October', 'November', 'December']
 
